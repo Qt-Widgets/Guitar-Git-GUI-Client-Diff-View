@@ -1,17 +1,20 @@
 
-QT       += core gui widgets svg network
+QT += core gui widgets svg network
 win32:QT += winextras
 
 CONFIG(debug,debug|release):TARGET = Guitard
 CONFIG(release,debug|release):TARGET = Guitar
 TEMPLATE = app
 
-CONFIG += c++11
+CONFIG += c++1z nostrip debug_info
 
 DESTDIR = $$PWD/_bin
 
 TRANSLATIONS = $$PWD/src/resources/translations/Guitar_ja.ts
 TRANSLATIONS += $$PWD/src/resources/translations/Guitar_ru.ts
+TRANSLATIONS += $$PWD/src/resources/translations/Guitar_es.ts
+TRANSLATIONS += $$PWD/src/resources/translations/Guitar_zh-CN.ts
+TRANSLATIONS += $$PWD/src/resources/translations/Guitar_zh-TW.ts
 
 DEFINES += APP_GUITAR
 
@@ -23,25 +26,44 @@ gcc:QMAKE_CXXFLAGS += -Wall -Wextra -Werror=return-type -Werror=trigraphs -Wno-s
 linux:QMAKE_RPATHDIR += $ORIGIN
 macx:QMAKE_RPATHDIR += @executable_path/../Frameworks
 
-linux:QTPLUGIN += ibusplatforminputcontextplugin
-#linux:QTPLUGIN += fcitxplatforminputcontextplugin
-
 INCLUDEPATH += $$PWD/src
+INCLUDEPATH += $$PWD/src/coloredit
 INCLUDEPATH += $$PWD/src/texteditor
-win32:INCLUDEPATH += $$PWD/misc/winpty
-win32:LIBS += $$PWD/misc/winpty/winpty.lib
+
+win32:INCLUDEPATH += $$PWD/misc/winpty/include
+
+# winpty x86
+#win32:LIBS += $$PWD/misc/winpty/ia32/lib/winpty.lib
+# winpty x86_64
+win32:LIBS += $$PWD/misc/winpty/x64/lib/winpty.lib
 
 # OpenSSL
 
-linux:LIBS += -lssl -lcrypto
+linux {
+	static_link_openssl {
+		LIBS += $$OPENSSL_LIB_DIR/libssl.a $$OPENSSL_LIB_DIR/libcrypto.a -ldl
+	} else {
+		LIBS += -lssl -lcrypto
+	}
+}
 haiku:LIBS += -lssl -lcrypto -lnetwork
 macx:INCLUDEPATH += /usr/local/include
 macx:LIBS += /usr/local/lib/libssl.a /usr/local/lib/libcrypto.a
 
 win32:msvc {
-	INCLUDEPATH += C:\openssl\include
 	INCLUDEPATH += $$PWD/../zlib
-	LIBS += -LC:\openssl\lib
+
+	# OpenSSL x86
+#	INCLUDEPATH += "C:\Program Files (x86)\OpenSSL\include"
+#	LIBS += "-LC:\Program Files (x86)\OpenSSL\lib"
+	# OpenSSL x86_64
+	INCLUDEPATH += "C:\Program Files\OpenSSL\include"
+	LIBS += "-LC:\Program Files\OpenSSL\lib"
+
+	# OpenSSL 1.0
+#	LIBS += -llibeay32 -lssleay32
+	# OpenSSL 1.1
+	LIBS += -llibcrypto -llibssl
 }
 
 win32:gcc {
@@ -71,12 +93,23 @@ win32:gcc {
 }
 
 !haiku {
-	unix:CONFIG(debug, debug|release):LIBS += $$PWD/_bin/libzd.a
-	unix:CONFIG(release, debug|release):LIBS += $$PWD/_bin/libz.a
-	#unix:LIBS += -lz
+	use_system_zlib {
+		unix:LIBS += -lz
+	} else {
+		unix:CONFIG(debug, debug|release):LIBS += $$PWD/_bin/libzd.a
+		unix:CONFIG(release, debug|release):LIBS += $$PWD/_bin/libz.a
+	}
 }
 
 haiku:LIBS += -lz
+
+# filetype library
+
+INCLUDEPATH += $$PWD/filetype/file/src
+SOURCES += filetype/filetype.cpp \
+	src/common/base64.cpp
+
+#
 
 win32 {
 	LIBS += -ladvapi32 -lshell32 -luser32 -lws2_32
@@ -86,288 +119,339 @@ win32 {
 
 macx {
 	QMAKE_INFO_PLIST = Info.plist
-    ICON += src/resources/Guitar.icns
+	ICON += src/resources/Guitar.icns
 	t.path=Contents/Resources
 	QMAKE_BUNDLE_DATA += t
 }
 
 SOURCES += \
-    src/AboutDialog.cpp \
-    src/AbstractProcess.cpp \
-    src/AbstractSettingForm.cpp \
-    src/ApplicationGlobal.cpp \
-    src/AvatarLoader.cpp \
-    src/BasicRepositoryDialog.cpp \
-    src/BigDiffWindow.cpp \
-    src/CheckoutDialog.cpp \
-    src/ClearButton.cpp \
-    src/CloneDialog.cpp \
-    src/CommitExploreWindow.cpp \
-    src/CommitPropertyDialog.cpp \
-    src/ConfigCredentialHelperDialog.cpp \
-    src/CreateRepositoryDialog.cpp \
-    src/DeleteBranchDialog.cpp \
-    src/DeleteTagsDialog.cpp \
-    src/DirectoryLineEdit.cpp \
-    src/ExperimentDialog.cpp \
-    src/FileDiffSliderWidget.cpp \
-    src/FileDiffWidget.cpp \
-    src/FileHistoryWindow.cpp \
-    src/FilePropertyDialog.cpp \
-    src/FileUtil.cpp \
-    src/FileViewWidget.cpp \
-    src/Git.cpp \
-    src/GitDiff.cpp \
-    src/GitHubAPI.cpp \
-    src/GitObjectManager.cpp \
-    src/GitPack.cpp \
-    src/GitPackIdxV2.cpp \
-    src/HyperLinkLabel.cpp \
-    src/ImageViewWidget.cpp \
-    src/JumpDialog.cpp \
-    src/LocalSocketReader.cpp \
-    src/LogTableWidget.cpp \
-    src/MainWindow.cpp \
-    src/MaximizeButton.cpp \
-    src/MemoryReader.cpp \
-    src/MergeBranchDialog.cpp \
-    src/MyImageViewWidget.cpp \
-    src/MyProcess.cpp \
-    src/MySettings.cpp \
-    src/MyTableWidgetDelegate.cpp \
-    src/MyTextEditorWidget.cpp \
-    src/MyToolButton.cpp \
-    src/Photoshop.cpp \
-    src/PushDialog.cpp \
-    src/ReadOnlyLineEdit.cpp \
-    src/ReadOnlyPlainTextEdit.cpp \
-    src/ReflogWindow.cpp \
-    src/RemoteRepositoriesTableWidget.cpp \
-    src/RepositoriesTreeWidget.cpp \
-    src/RepositoryData.cpp \
-    src/RepositoryInfoFrame.cpp \
-    src/RepositoryLineEdit.cpp \
-    src/RepositoryPropertyDialog.cpp \
-    src/SearchFromGitHubDialog.cpp \
-    src/SelectCommandDialog.cpp \
-    src/SetGlobalUserDialog.cpp \
-    src/SetRemoteUrlDialog.cpp \
-    src/SetUserDialog.cpp \
-    src/SettingBehaviorForm.cpp \
-    src/SettingExampleForm.cpp \
-    src/SettingNetworkForm.cpp \
-    src/SettingsDialog.cpp \
-    src/StatusLabel.cpp \
-    src/Terminal.cpp \
-    src/TextEditDialog.cpp \
-    src/Theme.cpp \
-    src/charvec.cpp \
-    src/common/joinpath.cpp \
-    src/common/misc.cpp \
-    src/gunzip.cpp \
-    src/main.cpp\
-    src/texteditor/AbstractCharacterBasedApplication.cpp \
-    src/texteditor/InputMethodPopup.cpp \
-    src/texteditor/TextEditorTheme.cpp \
-    src/texteditor/TextEditorWidget.cpp \
-    src/texteditor/UnicodeWidth.cpp \
-    src/texteditor/unicode.cpp \
-    src/urlencode.cpp \
-    src/webclient.cpp \
-    src/AreYouSureYouWantToContinueConnectingDialog.cpp \
-    src/BasicMainWindow.cpp \
-    src/BlameWindow.cpp \
-    src/CommitDialog.cpp \
-    src/CommitViewWindow.cpp \
-    src/ConfigSigningDialog.cpp \
-    src/DialogHeaderFrame.cpp \
-    src/DoYouWantToInitDialog.cpp \
-    src/EditGitIgnoreDialog.cpp \
-    src/EditRemoteDialog.cpp \
-    src/EditTagsDialog.cpp \
-    src/InputNewTagDialog.cpp \
-    src/LineEditDialog.cpp \
-    src/MenuButton.cpp \
-    src/RemoteWatcher.cpp \
-    src/SelectGpgKeyDialog.cpp \
-    src/SelectItemDialog.cpp \
-    src/SetGpgSigningDialog.cpp \
-    src/SettingGeneralForm.cpp \
-    src/SettingProgramsForm.cpp \
-    src/WelcomeWizardDialog.cpp \
-    src/darktheme/DarkStyle.cpp \
-    src/darktheme/NinePatch.cpp \
-    src/darktheme/StandardStyle.cpp \
-    src/darktheme/TraditionalWindowsStyleTreeControl.cpp \
-    src/gpg.cpp \
-    src/CloneFromGitHubDialog.cpp \
-	src/ObjectBrowserDialog.cpp
+	src/AboutDialog.cpp \
+	src/AbstractProcess.cpp \
+	src/AbstractSettingForm.cpp \
+	src/ApplicationGlobal.cpp \
+	src/AreYouSureYouWantToContinueConnectingDialog.cpp \
+	src/AvatarLoader.cpp \
+	src/BasicRepositoryDialog.cpp \
+	src/BigDiffWindow.cpp \
+	src/BlameWindow.cpp \
+    src/BranchLabel.cpp \
+	src/CheckoutDialog.cpp \
+	src/CherryPickDialog.cpp \
+	src/ClearButton.cpp \
+	src/CloneDialog.cpp \
+	src/CloneFromGitHubDialog.cpp \
+    src/ColorButton.cpp \
+	src/CommitDialog.cpp \
+	src/CommitExploreWindow.cpp \
+	src/CommitPropertyDialog.cpp \
+	src/CommitViewWindow.cpp \
+	src/ConfigCredentialHelperDialog.cpp \
+	src/ConfigSigningDialog.cpp \
+	src/CreateRepositoryDialog.cpp \
+	src/DeleteBranchDialog.cpp \
+	src/DeleteTagsDialog.cpp \
+	src/DialogHeaderFrame.cpp \
+	src/DirectoryLineEdit.cpp \
+	src/DoYouWantToInitDialog.cpp \
+	src/EditGitIgnoreDialog.cpp \
+	src/EditRemoteDialog.cpp \
+	src/EditTagsDialog.cpp \
+	src/ExperimentDialog.cpp \
+	src/FileDiffSliderWidget.cpp \
+	src/FileDiffWidget.cpp \
+	src/FileHistoryWindow.cpp \
+	src/FilePropertyDialog.cpp \
+	src/FileUtil.cpp \
+	src/FileViewWidget.cpp \
+	src/FilesListWidget.cpp \
+	src/FindCommitDialog.cpp \
+	src/Git.cpp \
+	src/GitDiff.cpp \
+	src/GitHubAPI.cpp \
+	src/GitObjectManager.cpp \
+	src/GitPack.cpp \
+	src/GitPackIdxV2.cpp \
+	src/HyperLinkLabel.cpp \
+	src/ImageViewWidget.cpp \
+	src/InputNewTagDialog.cpp \
+	src/JumpDialog.cpp \
+	src/Languages.cpp \
+	src/LineEditDialog.cpp \
+	src/LocalSocketReader.cpp \
+	src/LogTableWidget.cpp \
+	src/MainWindow.cpp \
+	src/MaximizeButton.cpp \
+	src/MemoryReader.cpp \
+	src/MenuButton.cpp \
+	src/MergeDialog.cpp \
+	src/MyImageViewWidget.cpp \
+	src/MyProcess.cpp \
+	src/MySettings.cpp \
+	src/MyTableWidgetDelegate.cpp \
+	src/MyTextEditorWidget.cpp \
+	src/MyToolButton.cpp \
+	src/ObjectBrowserDialog.cpp \
+	src/Photoshop.cpp \
+	src/PushDialog.cpp \
+	src/ReadOnlyLineEdit.cpp \
+	src/ReadOnlyPlainTextEdit.cpp \
+	src/ReflogWindow.cpp \
+	src/RemoteAdvancedOptionWidget.cpp \
+	src/RemoteRepositoriesTableWidget.cpp \
+	src/RepositoriesTreeWidget.cpp \
+	src/RepositoryData.cpp \
+	src/RepositoryInfoFrame.cpp \
+	src/RepositoryLineEdit.cpp \
+	src/RepositoryPropertyDialog.cpp \
+    src/RepositoryWrapperFrame.cpp \
+	src/SearchFromGitHubDialog.cpp \
+	src/SelectCommandDialog.cpp \
+	src/SelectGpgKeyDialog.cpp \
+	src/SelectItemDialog.cpp \
+	src/SetGlobalUserDialog.cpp \
+	src/SetGpgSigningDialog.cpp \
+	src/SetRemoteUrlDialog.cpp \
+	src/SetUserDialog.cpp \
+	src/SettingBehaviorForm.cpp \
+	src/SettingExampleForm.cpp \
+	src/SettingGeneralForm.cpp \
+	src/SettingNetworkForm.cpp \
+	src/SettingPrograms2Form.cpp \
+	src/SettingProgramsForm.cpp \
+    src/SettingVisualForm.cpp \
+	src/SettingsDialog.cpp \
+	src/StatusLabel.cpp \
+    src/SubmoduleAddDialog.cpp \
+    src/SubmoduleMainWindow.cpp \
+    src/SubmoduleUpdateDialog.cpp \
+    src/SubmodulesDialog.cpp \
+	src/Terminal.cpp \
+	src/TextEditDialog.cpp \
+	src/Theme.cpp \
+    src/UserEvent.cpp \
+	src/WelcomeWizardDialog.cpp \
+	src/charvec.cpp \
+    src/coloredit/ColorDialog.cpp \
+    src/coloredit/ColorEditWidget.cpp \
+    src/coloredit/ColorPreviewWidget.cpp \
+    src/coloredit/ColorSlider.cpp \
+    src/coloredit/ColorSquareWidget.cpp \
+    src/coloredit/RingSlider.cpp \
+	src/common/joinpath.cpp \
+	src/common/misc.cpp \
+	src/darktheme/DarkStyle.cpp \
+	src/darktheme/NinePatch.cpp \
+	src/darktheme/StandardStyle.cpp \
+	src/darktheme/TraditionalWindowsStyleTreeControl.cpp \
+	src/gpg.cpp \
+	src/gunzip.cpp \
+	src/main.cpp\
+	src/texteditor/AbstractCharacterBasedApplication.cpp \
+	src/texteditor/InputMethodPopup.cpp \
+	src/texteditor/TextEditorTheme.cpp \
+	src/texteditor/TextEditorWidget.cpp \
+	src/texteditor/UnicodeWidth.cpp \
+	src/texteditor/unicode.cpp \
+	src/urlencode.cpp \
+	src/webclient.cpp \
 
 HEADERS  += \
-    src/AboutDialog.h \
-    src/AbstractProcess.h \
-    src/AbstractSettingForm.h \
-    src/ApplicationGlobal.h \
-    src/AvatarLoader.h \
-    src/BasicRepositoryDialog.h \
-    src/BigDiffWindow.h \
-    src/CheckoutDialog.h \
-    src/ClearButton.h \
-    src/CloneDialog.h \
-    src/CommitExploreWindow.h \
-    src/CommitPropertyDialog.h \
-    src/ConfigCredentialHelperDialog.h \
-    src/CreateRepositoryDialog.h \
-    src/Debug.h \
-    src/DeleteBranchDialog.h \
-    src/DeleteTagsDialog.h \
-    src/DirectoryLineEdit.h \
-    src/ExperimentDialog.h \
-    src/FileDiffSliderWidget.h \
-    src/FileDiffWidget.h \
-    src/FileHistoryWindow.h \
-    src/FilePropertyDialog.h \
-    src/FileUtil.h \
-    src/Git.h \
-    src/GitDiff.h \
-    src/GitHubAPI.h \
-    src/GitObjectManager.h \
-    src/GitPack.h \
-    src/GitPackIdxV2.h \
-    src/HyperLinkLabel.h \
-    src/ImageViewWidget.h \
-    src/JumpDialog.h \
-    src/LocalSocketReader.h \
-    src/LogTableWidget.h \
-    src/MainWindow.h \
-    src/MaximizeButton.h \
-    src/MemoryReader.h \
-    src/MergeBranchDialog.h \
-    src/MyImageViewWidget.h \
-    src/MyProcess.h \
-    src/MySettings.h \
-    src/MyTableWidgetDelegate.h \
-    src/MyTextEditorWidget.h \
-    src/MyToolButton.h \
-    src/Photoshop.h \
-    src/PushDialog.h \
-    src/ReadOnlyLineEdit.h \
-    src/ReadOnlyPlainTextEdit.h \
-    src/ReflogWindow.h \
-    src/RemoteRepositoriesTableWidget.h \
-    src/RepositoriesTreeWidget.h \
-    src/RepositoryData.h \
-    src/RepositoryInfoFrame.h \
-    src/RepositoryLineEdit.h \
-    src/RepositoryPropertyDialog.h \
-    src/SearchFromGitHubDialog.h \
-    src/SelectCommandDialog.h \
-    src/SetGlobalUserDialog.h \
-    src/SetRemoteUrlDialog.h \
-    src/SetUserDialog.h \
-    src/SettingBehaviorForm.h \
-    src/SettingExampleForm.h \
-    src/SettingNetworkForm.h \
-    src/SettingsDialog.h \
-    src/StatusLabel.h \
-    src/Terminal.h \
-    src/TextEditDialog.h \
-    src/Theme.h \
-    src/charvec.h \
-    src/common/joinpath.h \
-    src/common/misc.h \
-    src/gunzip.h \
-    src/main.h \
-    src/texteditor/AbstractCharacterBasedApplication.h \
-    src/texteditor/InputMethodPopup.h \
-    src/texteditor/TextEditorTheme.h \
-    src/texteditor/TextEditorWidget.h \
-    src/texteditor/UnicodeWidth.h \
-    src/texteditor/unicode.h \
-    src/urlencode.h \
-    src/webclient.h \
-    src/AreYouSureYouWantToContinueConnectingDialog.h \
-    src/BasicMainWindow.h \
-    src/BlameWindow.h \
-    src/CommitDialog.h \
-    src/CommitViewWindow.h \
-    src/ConfigSigningDialog.h \
-    src/DialogHeaderFrame.h \
-    src/DoYouWantToInitDialog.h \
-    src/EditGitIgnoreDialog.h \
-    src/EditRemoteDialog.h \
-    src/EditTagsDialog.h \
-    src/InputNewTagDialog.h \
-    src/LineEditDialog.h \
-    src/MenuButton.h \
-    src/RemoteWatcher.h \
-    src/SelectGpgKeyDialog.h \
-    src/SelectItemDialog.h \
-    src/SetGpgSigningDialog.h \
-    src/SettingGeneralForm.h \
-    src/SettingProgramsForm.h \
-    src/WelcomeWizardDialog.h \
-    src/darktheme/DarkStyle.h \
-    src/darktheme/NinePatch.h \
-    src/darktheme/StandardStyle.h \
-    src/darktheme/TraditionalWindowsStyleTreeControl.h \
-    src/gpg.h \
-    src/platform.h \
-    src/CloneFromGitHubDialog.h \
-	src/ObjectBrowserDialog.h
+	filetype/filetype.h \
+	src/AboutDialog.h \
+	src/AbstractProcess.h \
+	src/AbstractSettingForm.h \
+	src/ApplicationGlobal.h \
+	src/AreYouSureYouWantToContinueConnectingDialog.h \
+	src/AvatarLoader.h \
+	src/BasicRepositoryDialog.h \
+	src/BigDiffWindow.h \
+	src/BlameWindow.h \
+	src/BranchLabel.h \
+	src/CheckoutDialog.h \
+	src/CherryPickDialog.h \
+	src/ClearButton.h \
+	src/CloneDialog.h \
+	src/CloneFromGitHubDialog.h \
+	src/ColorButton.h \
+	src/CommitDialog.h \
+	src/CommitExploreWindow.h \
+	src/CommitPropertyDialog.h \
+	src/CommitViewWindow.h \
+	src/ConfigCredentialHelperDialog.h \
+	src/ConfigSigningDialog.h \
+	src/CreateRepositoryDialog.h \
+	src/Debug.h \
+	src/DeleteBranchDialog.h \
+	src/DeleteTagsDialog.h \
+	src/DialogHeaderFrame.h \
+	src/DirectoryLineEdit.h \
+	src/DoYouWantToInitDialog.h \
+	src/EditGitIgnoreDialog.h \
+	src/EditRemoteDialog.h \
+	src/EditTagsDialog.h \
+	src/ExperimentDialog.h \
+	src/FileDiffSliderWidget.h \
+	src/FileDiffWidget.h \
+	src/FileHistoryWindow.h \
+	src/FilePropertyDialog.h \
+	src/FileUtil.h \
+	src/FilesListWidget.h \
+	src/FindCommitDialog.h \
+	src/Git.h \
+	src/GitDiff.h \
+	src/GitHubAPI.h \
+	src/GitObjectManager.h \
+	src/GitPack.h \
+	src/GitPackIdxV2.h \
+	src/HyperLinkLabel.h \
+	src/ImageViewWidget.h \
+	src/InputNewTagDialog.h \
+	src/JumpDialog.h \
+	src/Languages.h \
+	src/LineEditDialog.h \
+	src/LocalSocketReader.h \
+	src/LogTableWidget.h \
+	src/MainWindow.h \
+	src/MaximizeButton.h \
+	src/MemoryReader.h \
+	src/MenuButton.h \
+	src/MergeDialog.h \
+	src/MyImageViewWidget.h \
+	src/MyProcess.h \
+	src/MySettings.h \
+	src/MyTableWidgetDelegate.h \
+	src/MyTextEditorWidget.h \
+	src/MyToolButton.h \
+	src/ObjectBrowserDialog.h \
+	src/Photoshop.h \
+	src/PushDialog.h \
+	src/ReadOnlyLineEdit.h \
+	src/ReadOnlyPlainTextEdit.h \
+	src/ReflogWindow.h \
+	src/RemoteAdvancedOptionWidget.h \
+	src/RemoteRepositoriesTableWidget.h \
+	src/RepositoriesTreeWidget.h \
+	src/RepositoryData.h \
+	src/RepositoryInfoFrame.h \
+	src/RepositoryLineEdit.h \
+	src/RepositoryPropertyDialog.h \
+	src/RepositoryWrapperFrame.h \
+	src/SearchFromGitHubDialog.h \
+	src/SelectCommandDialog.h \
+	src/SelectGpgKeyDialog.h \
+	src/SelectItemDialog.h \
+	src/SetGlobalUserDialog.h \
+	src/SetGpgSigningDialog.h \
+	src/SetRemoteUrlDialog.h \
+	src/SetUserDialog.h \
+	src/SettingBehaviorForm.h \
+	src/SettingExampleForm.h \
+	src/SettingGeneralForm.h \
+	src/SettingNetworkForm.h \
+	src/SettingPrograms2Form.h \
+	src/SettingProgramsForm.h \
+	src/SettingVisualForm.h \
+	src/SettingsDialog.h \
+	src/StatusLabel.h \
+	src/SubmoduleAddDialog.h \
+	src/SubmoduleMainWindow.h \
+	src/SubmoduleUpdateDialog.h \
+	src/SubmodulesDialog.h \
+	src/Terminal.h \
+	src/TextEditDialog.h \
+	src/Theme.h \
+	src/UserEvent.h \
+	src/WelcomeWizardDialog.h \
+	src/charvec.h \
+	src/coloredit/ColorDialog.h \
+	src/coloredit/ColorEditWidget.h \
+	src/coloredit/ColorPreviewWidget.h \
+	src/coloredit/ColorSlider.h \
+	src/coloredit/ColorSquareWidget.h \
+	src/coloredit/RingSlider.h \
+	src/common/base64.h \
+	src/common/joinpath.h \
+	src/common/misc.h \
+	src/darktheme/DarkStyle.h \
+	src/darktheme/NinePatch.h \
+	src/darktheme/StandardStyle.h \
+	src/darktheme/TraditionalWindowsStyleTreeControl.h \
+	src/gpg.h \
+	src/gunzip.h \
+	src/main.h \
+	src/platform.h \
+	src/texteditor/AbstractCharacterBasedApplication.h \
+	src/texteditor/InputMethodPopup.h \
+	src/texteditor/TextEditorTheme.h \
+	src/texteditor/TextEditorWidget.h \
+	src/texteditor/UnicodeWidth.h \
+	src/texteditor/unicode.h \
+	src/urlencode.h \
+	src/webclient.h
 
 HEADERS += src/version.h
 
 FORMS    += \
-    src/AboutDialog.ui \
-    src/BigDiffWindow.ui \
-    src/CheckoutDialog.ui \
-    src/CloneDialog.ui \
-    src/CommitExploreWindow.ui \
-    src/CommitPropertyDialog.ui \
-    src/ConfigCredentialHelperDialog.ui \
-    src/CreateRepositoryDialog.ui \
-    src/DeleteBranchDialog.ui \
-    src/DeleteTagsDialog.ui \
-    src/ExperimentDialog.ui \
-    src/FileDiffWidget.ui \
-    src/FileHistoryWindow.ui \
-    src/FilePropertyDialog.ui \
-    src/JumpDialog.ui \
-    src/MainWindow.ui \
-    src/MergeBranchDialog.ui \
-    src/PushDialog.ui \
-    src/RepositoryPropertyDialog.ui \
-    src/SearchFromGitHubDialog.ui \
-    src/SelectCommandDialog.ui \
-    src/SetRemoteUrlDialog.ui \
-    src/SetUserDialog.ui \
-    src/SettingBehaviorForm.ui \
-    src/SettingExampleForm.ui \
-    src/SettingNetworkForm.ui \
-    src/SettingsDialog.ui \
-    src/TextEditDialog.ui \
-    src/AreYouSureYouWantToContinueConnectingDialog.ui \
-    src/BlameWindow.ui \
-    src/CommitDialog.ui \
-    src/CommitViewWindow.ui \
-    src/ConfigSigningDialog.ui \
-    src/DoYouWantToInitDialog.ui \
-    src/EditGitIgnoreDialog.ui \
-    src/EditRemoteDialog.ui \
-    src/EditTagsDialog.ui \
-    src/InputNewTagDialog.ui \
-    src/LineEditDialog.ui \
-    src/ReflogWindow.ui \
-    src/SelectGpgKeyDialog.ui \
-    src/SelectItemDialog.ui \
-    src/SetGlobalUserDialog.ui \
-    src/SetGpgSigningDialog.ui \
-    src/SettingGeneralForm.ui \
-    src/SettingProgramsForm.ui \
-    src/WelcomeWizardDialog.ui \
-    src/CloneFromGitHubDialog.ui \
-    src/ObjectBrowserDialog.ui
+	src/AboutDialog.ui \
+	src/AreYouSureYouWantToContinueConnectingDialog.ui \
+	src/BigDiffWindow.ui \
+	src/BlameWindow.ui \
+	src/CheckoutDialog.ui \
+	src/CherryPickDialog.ui \
+	src/CloneDialog.ui \
+	src/CloneFromGitHubDialog.ui \
+	src/CommitDialog.ui \
+	src/CommitExploreWindow.ui \
+	src/CommitPropertyDialog.ui \
+	src/CommitViewWindow.ui \
+	src/ConfigCredentialHelperDialog.ui \
+	src/ConfigSigningDialog.ui \
+	src/CreateRepositoryDialog.ui \
+	src/DeleteBranchDialog.ui \
+	src/DeleteTagsDialog.ui \
+	src/DoYouWantToInitDialog.ui \
+	src/EditGitIgnoreDialog.ui \
+	src/EditRemoteDialog.ui \
+	src/EditTagsDialog.ui \
+	src/ExperimentDialog.ui \
+	src/FileDiffWidget.ui \
+	src/FileHistoryWindow.ui \
+	src/FilePropertyDialog.ui \
+	src/FindCommitDialog.ui \
+	src/InputNewTagDialog.ui \
+	src/JumpDialog.ui \
+	src/LineEditDialog.ui \
+	src/MainWindow.ui \
+	src/MergeDialog.ui \
+	src/ObjectBrowserDialog.ui \
+	src/PushDialog.ui \
+	src/ReflogWindow.ui \
+	src/RemoteAdvancedOptionWidget.ui \
+	src/RepositoryPropertyDialog.ui \
+	src/SearchFromGitHubDialog.ui \
+	src/SelectCommandDialog.ui \
+	src/SelectGpgKeyDialog.ui \
+	src/SelectItemDialog.ui \
+	src/SetGlobalUserDialog.ui \
+	src/SetGpgSigningDialog.ui \
+	src/SetRemoteUrlDialog.ui \
+	src/SetUserDialog.ui \
+	src/SettingBehaviorForm.ui \
+	src/SettingExampleForm.ui \
+	src/SettingGeneralForm.ui \
+	src/SettingNetworkForm.ui \
+	src/SettingPrograms2Form.ui \
+	src/SettingProgramsForm.ui \
+	src/SettingVisualForm.ui \
+	src/SettingsDialog.ui \
+	src/SubmoduleAddDialog.ui \
+	src/SubmoduleMainWindow.ui \
+	src/SubmoduleUpdateDialog.ui \
+	src/SubmodulesDialog.ui \
+	src/TextEditDialog.ui \
+	src/WelcomeWizardDialog.ui \
+	src/coloredit/ColorDialog.ui \
+	src/coloredit/ColorEditWidget.ui
 
 RESOURCES += \
 	src/resources/resources.qrc
@@ -397,5 +481,7 @@ win32 {
         src/win32/thread.h \
         src/win32/win32.h
 }
+
+include(filetype/filetype.pri)
 
 

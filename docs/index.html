@@ -3,7 +3,7 @@
 
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" href="style/style.css" type="text/css" />
+<link rel="stylesheet" href="html/style/style.css" type="text/css" />
 <!-- #BeginEditable "doctitle" -->
 <title>Guitar - the graphical git client</title>
 <style>
@@ -15,67 +15,79 @@ table#screenshots, table#screenshots tr, table#screenshots td {
 </style>
 <!-- #EndEditable -->
 </head>
-<body bgcolor="#f0f0f0" background="style/bg.gif">
+<body bgcolor="#f0f0f0" background="html/style/bg.gif">
 <div id="body">
 <div id="header">
-<div style="float: left"><a href="https://soramimi.github.io/Guitar/"><img src="banner.png" width="443" height="48" alt="Guitar - the graphical git client"></a></div>
+<div style="float: left"><a href="https://soramimi.github.io/Guitar/"><img src="html/banner.png" width="443" height="48" alt="Guitar - the graphical git client"></a></div>
 <div style="text-align: right;">under development</div>
 <div style="clear: both;"></div>
 </div>
 <!-- #BeginEditable "content" -->
-<p>&nbsp;</p>
+<p>注：このページの記述内容は若干古いです。最新情報は、<a href="https://github.com/soramimi/Guitar">GitHubのリポジトリページ</a>をご覧ください。</p>
+	<hr>
 <p>Windows、macOS、Linuxで動作する、バージョン管理ツール Git のクライアントアプリケーションです。</p>
-<img src="github.png" width="20" height="16" alt="github"><a href="https://github.com/soramimi/Guitar">https://github.com/soramimi/Guitar</a><br>
-<img src="qiita.png" width="20" height="16" alt=""/><a href="https://qiita.com/soramimi_jp/items/8425196ddc28bf283333">https://qiita.com/soramimi_jp/items/8425196ddc28bf283333</a>
+<p><img src="html/github.png" width="20" height="16" alt="github"><a href="https://github.com/soramimi/Guitar">https://github.com/soramimi/Guitar</a><br>
+<img src="html/qiita.png" width="20" height="16" alt=""/><a href="https://qiita.com/soramimi_jp/items/8425196ddc28bf283333">https://qiita.com/soramimi_jp/items/8425196ddc28bf283333<br>
+</a><a href="https://qiita.com/soramimi_jp/items/2bca23c52ae677ad7b3d"><img src="html/qiita.png" width="20" height="16" alt=""/>https://qiita.com/soramimi_jp/items/2bca23c52ae677ad7b3d</a></p>
+<p>多くのGitクライアントアプリは何かしら問題を抱えています。起動時間が遅すぎるとか、よく落ちるとか、ダウンロードの際のユーザー登録が面倒だとか、商用利用するには有料だとか、マルチプラットフォーム対応してないとか、アニメーションや視覚効果のような演出が過剰でウザいとか、ソースコードが公開されていない、といったものです。そのような不都合をできる限り排除するようにしました。 最初はGitの使い方を私自身が習得するためと、内部の仕組みに興味があったので、自分の勉強のために開発に着手しました。</p>
+<p>今時の優秀なエンジニアの方は、GUIでGitなんて、、、と思う方もいらっしゃるかもしれません。それはそれで大いに結構なことです。私自身も、めったに使わないコマンドを実行したいときは、無理してGUIに頼らず、ターミナルを開いてgitコマンドを手入力することもあります。これは便利だと思う機能を見つけたら、このアプリに組み込んだりします。日常で頻繁に使うGit操作を快適に行いたいとか、コミットグラフを綺麗に見たいとか、そのような用途だけでもお使いいただけます。使いたがらない人にGUIを強要する考えはないので、ブランチの流れをビジュアルに見たいだけの理由でこのアプリを使っていただくのでも嬉しいです。なので、高機能なクライアントアプリとしてではなく、GUI支援アプリと思っていただいても結構です。</p>
 <h4>特徴</h4>
 <ul>
-  <li>C++で開発。GUIフレームワークはQt 5を採用。</li>
-  <li>無料、オープンソース、フリーソフト。（GPLv2）</li>
-  <li>ダウンロードする際に、メールアドレスなどの個人情報を登録する必要はありません。</li>
+  <li>私用・商用を問わず無料</li>
+  <li>メールアドレスや個人情報を登録することはありません。</li>
   <li>某アプリほど、起動に時間がかかりません。</li>
-  <li>某アプリほど、アイコンが気持ち悪くありません。</li>
-  <li>元は、作者（私）がGitを習得することを目的に作り始めたプログラムなので、Gitの奥深い機能までサポートしてはいません。
-    <ul>
-      <li>追加してほしい機能があったら、開発に参加して改良したり、アイディアを提案したりしましょう。（←協力者募集です。お願いします。） </li>
-    </ul>
-  </li>
+  <li>某アプリほど、アイコンが気持ち悪く（可愛く？）ありません。</li>
+  <li>macOS Mojave のダークモードに対応しているほか、各プラットフォームでのダーク描画を実装しています。 </li>
+  <li>GPG署名に（だいたい）対応しています。</li>
+  <li>オープンソース、フリーソフト。（GPLv2）</li>
+  <li>C++で開発。GUIフレームワークはQt 5を採用。</li>
 </ul>
 <h4>スクリーンショット</h4>
 <table id="screenshots" width="100%" border="0" cellpadding="0" cellspacing="0">
   <tbody>
-    <tr bgcolor="#FFFFFF">
-      <td bgcolor="#FFFFFF" style="text-align: center;"><span style="text-align: center"><a href="screenshots/overview.png"><img src="screenshots/overview.png" alt="overview" width="230" height="171" class="border"></a></span></td>
-      <td bgcolor="#FFFFFF" style="text-align: center;"class="background-transparent"><a href="screenshots/commitgraph.png"><img src="screenshots/commitgraph.png" alt="" width="257" height="170" class="border"/></a></td>
-      <td bgcolor="#FFFFFF" style="text-align: center;"class="background-transparent"><a href="screenshots/diffview.png"><img src="screenshots/diffview.png" alt="" width="230" height="174" class="border"/></a></td>
-      <td bgcolor="#FFFFFF" style="text-align: center;"class="background-transparent"><a href="screenshots/raspberrypi.jpg"><img src="screenshots/raspberrypi.jpg" alt="" width="230" height="172" class="border"/></a></td>
+    <tr style="text-align: center">
+      <td bgcolor="#FFFFFF"><a href="html/screenshots/windows.png"><img src="html/screenshots/windows.png" width="320" height="184" alt=""/></a></td>
+      <td bgcolor="#FFFFFF"><a href="html/screenshots/macos.png"><img src="html/screenshots/macos.png" width="320" height="198" alt=""/></a></td>
+      <td bgcolor="#FFFFFF"><a href="html/screenshots/ubuntu.png"><img src="html/screenshots/ubuntu.png" width="320" height="240" alt=""/></a></td>
     </tr>
     <tr style="text-align: center">
-      <td bgcolor="#FFFFFF">全体像</td>
-      <td bgcolor="#FFFFFF">リポジトリリストとコミットグラフ</td>
-      <td bgcolor="#FFFFFF">diffビュー</td>
-      <td bgcolor="#FFFFFF">Raspberry Pi 版</td>
+      <td bgcolor="#FFFFFF">▲Windows</td>
+      <td bgcolor="#FFFFFF">▲macOS</td>
+      <td bgcolor="#FFFFFF">▲Ubuntu</td>
+    </tr>
+    <tr style="text-align: center">
+      <td bgcolor="#FFFFFF"><a href="html/screenshots/raspberrypi0.jpg"><img src="html/screenshots/raspberrypi0.jpg" width="320" height="240" alt=""/></a></td>
+      <td bgcolor="#FFFFFF"><a href="html/screenshots/raspberrypi1.jpg"><img src="html/screenshots/raspberrypi1.jpg" width="320" height="240" alt=""/></a></td>
+      <td bgcolor="#FFFFFF"><span class="background-transparent" style="text-align: center;"><a href="html/screenshots/commitgraph.png"><img src="html/screenshots/commitgraph.png" alt="" width="320" height="211" class="border"/></a></span></td>
+    </tr>
+    <tr style="text-align: center">
+      <td bgcolor="#FFFFFF">▲Raspbian</td>
+      <td bgcolor="#FFFFFF">▲ダーク描画</td>
+      <td bgcolor="#FFFFFF">▲コミットグラフとログ</td>
+    </tr>
+    <tr style="text-align: center">
+      <td bgcolor="#FFFFFF"><span class="background-transparent" style="text-align: center;"><a href="html/screenshots/diffview.png"><img src="html/screenshots/diffview.png" alt="" width="320" height="243" class="border"/></a></span></td>
+      <td bgcolor="#FFFFFF">&nbsp;</td>
+      <td bgcolor="#FFFFFF">&nbsp;</td>
+    </tr>
+    <tr style="text-align: center">
+      <td bgcolor="#FFFFFF">▲Diffビュー</td>
+      <td bgcolor="#FFFFFF">&nbsp;</td>
+      <td bgcolor="#FFFFFF">&nbsp;</td>
     </tr>
   </tbody>
 </table>
-<h2>コンパイル済みバイナリ</h2>
-<h3><a href="https://files.soramimi.jp/guitar/0.9.4/">v0.9.4</a> (2019-2-27)</h3>
-<p>下記OS用のバイナリを用意しました。Windows版とmacOS版はQtライブラリを同梱していますが、Linux版では apt-get でQt5関連ファイルをインストールする必要があるかもしれません。これら以外のLinux等を使用する場合は、ソースから自前ビルドする必要があります。
-</p>
-<ul>
-  <li>Windows</li>
-  <li>macOS</li>
-  <li>Ubuntu16 x86</li>
-  <li>Ubuntu16 x64</li>
-  <li>Raspbian stretch</li>
-</ul>
+<h2>ダウンロード</h2>
+<p>最新版のダウンロードは次のリンクからお願いします。</p>
+<p><a href="https://files.soramimi.jp/guitar/">https://files.soramimi.jp/guitar/</a></p>
 <h2>ビルド方法</h2>
 <ul>
-  <li><a href="build.html">ビルド方法</a></li>
-    <li><a href="build-en.html">How to build the Guitar (en) (draft)</a></li>
+  <li><a href="html/build.html">ビルド方法</a></li>
+    <li><a href="html/build-en.html">How to build the Guitar (en) (draft)</a></li>
 </ul>
 <h2>開発</h2>
 <ul>
-  <li><a href="codingstyle.html">コーディングスタイル</a></li>
+  <li><a href="html/codingstyle.html">コーディングスタイル</a></li>
 </ul>
 <h2>最初の起動</h2>
 <p>Guitarを起動すると、初回だけgitコマンドとfileコマンド（Windowsの場合は、git.exeとfile.exe）の場所を尋ねられます。PATHが通っている場合は、候補が表示されますので、適切なものを選択してOKを押してください。候補が無い場合はインストールする必要があります。</p>
@@ -109,12 +121,14 @@ table#screenshots, table#screenshots tr, table#screenshots td {
 </blockquote>
 <h2>既知の問題</h2>
 <ul>
-  <li>ファイルリストでバイナリファイルを選択した場合、対応済みの一部の画像ファイルを除き、diffビューが乱れた表示になることがあります。</li>
+  <li>ファイルリストでバイナリファイルを選択したとき、対応済みの一部の画像ファイルを除き、diffビューが乱れた表示になることがあります。</li>
+  <li>gitのサブモジュール機能については一切考慮していません。将来バージョンの課題となっています。</li>
+  <li>検索機能はありません。いつかそのうち付けます</li>
 </ul>
 <!-- #EndEditable -->
 <div id="footer">
 <span id="copyright"></span>
 </div>
 </body>
-<script type="text/javascript" src="common.js"></script>
+<script type="text/javascript" src="html/common.js"></script>
 <!-- InstanceEnd --></html>

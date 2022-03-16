@@ -1,23 +1,19 @@
 #include "Terminal.h"
-
+#include "ApplicationGlobal.h"
 #include <QFileInfo>
+
+#include "ApplicationGlobal.h"
 
 #ifdef Q_OS_WIN
 
+#include <QDir>
 #include <windows.h>
 
-void Terminal::open(QString const &dir)
+void Terminal::open(QString const &dir, QString const &ssh_key)
 {
+	QString cmd = global->appsettings.terminal_command;
+	QDir::setCurrent(dir);
 	if (dir.indexOf('\"') < 0 && QFileInfo(dir).isDir()) {
-		QString arg;
-		if (dir.at(0).isLetter() && dir.at(1) == ':') {
-			arg = QString("%1 & cd %2").arg(dir.mid(0, 2)).arg(dir);
-		} else {
-			arg = QString("cd %1").arg(dir);
-		}
-		QString cmd = "cmd.exe /k \"%1\"";
-		cmd = cmd.arg(arg);
-
 		PROCESS_INFORMATION pi;
 		STARTUPINFO si;
 
@@ -33,24 +29,19 @@ void Terminal::open(QString const &dir)
 
 #else
 
-void Terminal::open(QString const &dir)
+void Terminal::open(QString const &dir, QString const &ssh_key)
 {
 	if (dir.indexOf('\"') < 0 && QFileInfo(dir).isDir()) {
-		auto GetTerm = [&](std::vector<char const *> const &vec){
-			#ifndef __HAIKU__
-				for (char const *name : vec) {
-					char const *p = getenv(name);
-					if (p && *p) return p;
-				}
-				return "x-terminal-emulator";
-			#else
-				return "Terminal";
-			#endif
-		};
-		QString term = GetTerm({"COLORTERM", "TERM"});
-
+		QString term = global->appsettings.terminal_command;
+		if (term.isEmpty()) {
+			term = ApplicationSettings::defaultSettings().terminal_command;
+		}
 		QString cmd = "/bin/sh -c \"cd \\\"%1\\\" && %2\" &";
 		cmd = cmd.arg(dir).arg(term);
+		if (!global->appsettings.ssh_command.isEmpty() && !ssh_key.isEmpty()) {
+			QString env = QString("GIT_SSH_COMMAND=\"%1 -i %2\" ").arg(global->appsettings.ssh_command).arg(ssh_key);
+			cmd = env + cmd;
+		}
 		int r = system(cmd.toStdString().c_str());
 		(void)r;
 	}

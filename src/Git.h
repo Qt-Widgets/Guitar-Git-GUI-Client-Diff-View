@@ -37,7 +37,8 @@ struct TreeLine {
 struct NamedCommitItem {
 	enum class Type {
 		None,
-		Branch,
+		BranchLocal,
+		BranchRemote,
 		Tag,
 	};
 	Type type = Type::None;
@@ -55,6 +56,8 @@ public:
 	class Context {
 	public:
 		QString git_command;
+		QString ssh_command;
+		QString ssh_private_key;
 	};
 
 	struct Object {
@@ -71,6 +74,35 @@ public:
 		Type type = Type::UNKNOWN;
 		QByteArray content;
 	};
+
+	struct SubmoduleItem {
+		QString name;
+		QString id;
+		QString path;
+		QString refs;
+		QString url;
+		operator bool () const
+		{
+			return isValidID(id) && !path.isEmpty();
+		}
+	};
+
+	struct CommitItem {
+		QString commit_id;
+		QStringList parent_ids;
+		QString author;
+		QString email;
+		QString message;
+		QDateTime commit_date;
+		std::vector<TreeLine> parent_lines;
+		QByteArray fingerprint;
+		char signature = 0; // git log format:%G?
+		bool has_child = false;
+		int marker_depth = -1;
+		bool resolved =  false;
+		bool strange_date = false;
+	};
+	using CommitItemList = std::vector<CommitItem>;
 
 	class Hunk {
 	public:
@@ -99,10 +131,18 @@ public:
 			QString b_id;
 		} blob;
 		QList<Hunk> hunks;
+		struct SubmoduleDetail {
+			Git::SubmoduleItem item;
+			Git::CommitItem commit;
+		} a_submodule, b_submodule;
 		Diff() = default;
 		Diff(QString const &id, QString const &path, QString const &mode)
 		{
 			makeForSingleFile(this, QString(GIT_ID_LENGTH, '0'), id, path, mode);
+		}
+		bool isSubmodule() const
+		{
+			return mode == "160000";
 		}
 	private:
 		void makeForSingleFile(Git::Diff *diff, QString const &id_a, QString const &id_b, QString const &path, QString const &mode);
@@ -138,23 +178,6 @@ public:
 		}
 		return SignatureGrade::Unknown;
 	}
-
-	struct CommitItem {
-		QString commit_id;
-		QStringList parent_ids;
-		QString author;
-		QString email;
-		QString message;
-		QDateTime commit_date;
-		std::vector<TreeLine> parent_lines;
-		QByteArray fingerprint;
-		char signature = 0; // git log format:%G?
-		bool has_child = false;
-		int marker_depth = -1;
-		bool resolved =  false;
-		bool strange_date = false;
-	};
-	using CommitItemList = std::vector<CommitItem>;
 
 	static bool isUncommited(CommitItem const &item)
 	{
@@ -215,6 +238,12 @@ public:
 		Unmerged_BothAdded,
 		Unmerged_BothModified,
 		Tracked_ = 0xf0000000
+	};
+
+	enum class MergeFastForward {
+		Default,
+		No,
+		Only,
 	};
 
 	class FileStatus {
@@ -304,15 +333,14 @@ private:
 	Private *m;
 	QStringList make_branch_list_();
 	QByteArray cat_file_(QString const &id);
-	FileStatusList status_();
+	FileStatusList status_s_();
 	bool commit_(QString const &msg, bool amend, bool sign, AbstractPtyProcess *pty);
 	bool push_(bool tags, AbstractPtyProcess *pty);
 	static void parseAheadBehind(QString const &s, Branch *b);
 	Git();
 	QString encodeQuotedText(QString const &str);
-	QStringList refs();
 public:
-	Git(Context const &cx, QString const &repodir);
+	Git(Context const &cx, QString const &repodir, QString const &submodpath, QString const &sshkey);
 	Git(Git &&r) = delete;
 	 ~Git() override;
 
@@ -321,7 +349,7 @@ public:
 	void setLogCallback(callback_t func, void *cookie);
 
 	QByteArray toQByteArray() const;
-	void setGitCommand(QString const &path);
+	void setGitCommand(QString const &gitcmd, const QString &sshcmd = {});
 	QString gitCommand() const;
 	void clearResult();
 	QString resultText() const;
@@ -332,8 +360,10 @@ public:
 		return git(arg, true);
 	}
 
-	void setWorkingRepositoryDir(QString const &repo);
-	QString const &workingRepositoryDir() const;
+	void setWorkingRepositoryDir(QString const &repo, const QString &submodpath, const QString &sshkey);
+	QString workingDir() const;
+	QString const &sshKey() const;
+	void setSshKey(const QString &sshkey) const;
 
 	QString getCurrentBranchName();
 	bool isValidWorkingCopy() const;
@@ -352,7 +382,7 @@ public:
 	static CloneData preclone(QString const &url, QString const &path);
 	bool clone(CloneData const &data, AbstractPtyProcess *pty);
 
-	FileStatusList status();
+	FileStatusList status_s();
 	bool cat_file(QString const &id, QByteArray *out);
 	void resetFile(QString const &path);
 	void resetAllFiles();
@@ -366,6 +396,7 @@ public:
 	void pull(AbstractPtyProcess *pty = nullptr);
 
 	void fetch(AbstractPtyProcess *pty = nullptr, bool prune = false);
+	void fetch_tags_f(AbstractPtyProcess *pty);
 
 	QList<Branch> branches();
 
@@ -387,12 +418,14 @@ public:
 		QString name;
 		QString url;
 		QString purpose;
+		QString ssh_key;
 	};
 
 	QList<DiffRaw> diff_raw(QString const &old_id, QString const &new_id);
 
-	static bool isValidID(QString const &s);
+	static bool isValidID(QString const &id);
 
+	QString status();
 	bool commit(QString const &text, bool sign, AbstractPtyProcess *pty);
 	bool commit_amend_m(QString const &text, bool sign, AbstractPtyProcess *pty);
 	bool revert(QString const &id);
@@ -400,7 +433,7 @@ public:
 	void getRemoteURLs(QList<Remote> *out);
 	void createBranch(QString const &name);
 	void checkoutBranch(QString const &name);
-	void mergeBranch(QString const &name);
+	void mergeBranch(QString const &name, MergeFastForward ff, bool squash);
 	void rebaseBranch(QString const &name);
 	static bool isValidWorkingCopy(QString const &dir);
 	QString diff_to_file(QString const &old_id, QString const &path);
@@ -409,10 +442,11 @@ public:
 	GitPtr dup() const;
 	QString rev_parse(QString const &name);
 	QList<Tag> tags();
+	QList<Tag> tags2();
 	bool tag(QString const &name, QString const &id = QString());
 	void delete_tag(QString const &name, bool remote);
-	void setRemoteURL(QString const &name, QString const &url);
-	void addRemoteURL(QString const &name, QString const &url);
+	void setRemoteURL(const Remote &remote);
+	void addRemoteURL(const Remote &remote);
 	void removeRemote(QString const &name);
 	QStringList getRemotes();
 
@@ -432,10 +466,13 @@ public:
 	bool reset_head1();
 	bool reset_hard();
 	bool clean_df();
-	void push_u(QString const &remote, QString const &branch, AbstractPtyProcess *pty);
+	void push_u(bool set_upstream, QString const &remote, QString const &branch, bool force, AbstractPtyProcess *pty);
 	QString objectType(QString const &id);
 	bool rm_cached(QString const &file);
 	void cherrypick(QString const &name);
+	QString getCherryPicking() const;
+
+	QString getMessage(const QString &id);
 
 	struct ReflogItem {
 		QString id;
@@ -477,8 +514,21 @@ public:
 	bool stash();
 	bool stash_apply();
 	bool stash_drop();
+
+	struct SubmoduleUpdateData {
+		bool init = true;
+		bool recursive = true;
+	};
+
+
+	QList<SubmoduleItem> submodules();
+	bool submodule_add(const CloneData &data, bool force, AbstractPtyProcess *pty);
+	bool submodule_update(const SubmoduleUpdateData &data, AbstractPtyProcess *pty);
 };
 
 void parseDiff(std::string const &s, Git::Diff const *info, Git::Diff *out);
+
+void parseGitSubModules(QByteArray const &ba, QList<Git::SubmoduleItem> *out);
+
 
 #endif // GIT_H

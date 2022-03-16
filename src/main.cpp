@@ -1,11 +1,12 @@
 
-#include "darktheme/DarkStyle.h"
+#include "main.h"
 #include "ApplicationGlobal.h"
 #include "MainWindow.h"
 #include "MySettings.h"
+#include "SettingGeneralForm.h"
 #include "common/joinpath.h"
 #include "common/misc.h"
-#include "main.h"
+#include "darktheme/DarkStyle.h"
 #include "platform.h"
 #include "webclient.h"
 #include <QApplication>
@@ -15,10 +16,17 @@
 #include <QProxyStyle>
 #include <QStandardPaths>
 #include <QTranslator>
+#include <csignal>
 #include <string>
 
 #ifdef Q_OS_WIN
 #include "win32/win32.h"
+
+#include "SettingGeneralForm.h"
+#endif
+
+#ifndef APP_GUITAR
+#error APP_GUITAR is not defined.
 #endif
 
 ApplicationGlobal *global = nullptr;
@@ -27,6 +35,22 @@ ApplicationSettings ApplicationSettings::defaultSettings()
 {
 	ApplicationSettings s;
 	s.proxy_server = "http://squid:3128/";
+
+	s.branch_label_color.head = QColor(255, 192, 224); // pink
+	s.branch_label_color.local = QColor(192, 224, 255); // blue
+	s.branch_label_color.remote = QColor(192, 240, 224); // green
+	s.branch_label_color.tag = QColor(255, 224, 192); // orange
+
+#ifdef _WIN32
+	s.terminal_command = "cmd"; // or wsl
+#else
+#ifdef __HAIKU__
+	s.terminal_command = "Terminal";
+#else
+	s.terminal_command = "x-terminal-emulator";
+#endif
+#endif
+
 	return s;
 }
 
@@ -40,6 +64,14 @@ static bool isHighDpiScalingEnabled()
 
 void setEnvironmentVariable(QString const &name, QString const &value);
 
+void onSigTerm(int)
+{
+	qDebug() << "SIGTERM caught";
+	if (global->mainwindow) {
+		global->mainwindow->close();
+	}
+}
+
 int main(int argc, char *argv[])
 {
 #ifdef Q_OS_WIN
@@ -50,6 +82,7 @@ int main(int argc, char *argv[])
 
 	ApplicationGlobal g;
 	global = &g;
+	signal(SIGTERM, onSigTerm);
 
 	global->organization_name = ORGANIZATION_NAME;
 	global->application_name = APPLICATION_NAME;
@@ -69,10 +102,15 @@ int main(int argc, char *argv[])
 	}
 
 	QApplication a(argc, argv);
+	a.setAttribute(Qt::AA_UseHighDpiPixmaps);
+
+	global->init(&a);
+
 	QApplication::setOrganizationName(global->organization_name);
 	QApplication::setApplicationName(global->application_name);
 
 	qRegisterMetaType<RepositoryItem>("RepositoryItem");
+	qRegisterMetaType<RepositoryWrapperFrameP>("RepositoryWrapperFrameP");
 
 	{
 		MySettings s;
@@ -87,7 +125,8 @@ int main(int argc, char *argv[])
 		s.endGroup();
 	}
 
-	QApplication::setStyle(global->theme->newStyle());
+	a.setStyle(global->theme->newStyle());
+	a.setPalette(a.style()->standardPalette());
 
 	if (QApplication::queryKeyboardModifiers() & Qt::ShiftModifier) {
 		global->start_with_shift_key = true;
@@ -115,6 +154,12 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	// 設定ファイルがないときは、言語の選択をする。
+	if (!QFileInfo::exists(global->config_file_path)) {
+		auto langs = SettingGeneralForm::languages();
+		SettingGeneralForm::execSelectLanguageDialog(nullptr, langs, [](){});
+	}
+
 	QTranslator translator;
 	{
 		if (global->language_id.isEmpty() || global->language_id == "en") {
@@ -130,6 +175,7 @@ int main(int argc, char *argv[])
 	}
 
 	MainWindow w;
+	global->mainwindow = &w;
 	global->panel_bg_color = w.palette().color(QPalette::Background);
 	w.setWindowIcon(QIcon(":/image/guitar.png"));
 	w.show();
@@ -150,6 +196,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	return QApplication::exec();
+	int r = QApplication::exec();
+	global->mainwindow = nullptr;
+	return r;
 }
 

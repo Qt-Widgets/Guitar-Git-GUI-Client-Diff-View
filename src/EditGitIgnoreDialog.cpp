@@ -59,7 +59,7 @@ QString EditGitIgnoreDialog::text() const
 void EditGitIgnoreDialog::on_pushButton_edit_file_clicked()
 {
 	if (TextEditDialog::editFile(this, gitignore_path, ".gitignore", text() + '\n')) {
-		mainwindow()->updateCurrentFilesList();
-		done(QDialog::Accepted);
+		mainwindow()->updateCurrentFilesList(mainwindow()->frame());
+		done(QDialog::Rejected);
 	}
 }

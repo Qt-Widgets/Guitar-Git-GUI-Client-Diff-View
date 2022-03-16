@@ -5,7 +5,7 @@
 #include "common/misc.h"
 #include "Git.h"
 
-WelcomeWizardDialog::WelcomeWizardDialog(BasicMainWindow *parent)
+WelcomeWizardDialog::WelcomeWizardDialog(MainWindow *parent)
 	: QDialog(parent)
 	, ui(new Ui::WelcomeWizardDialog)
 {
@@ -24,13 +24,13 @@ WelcomeWizardDialog::WelcomeWizardDialog(BasicMainWindow *parent)
 	on_stackedWidget_currentChanged(0);
 
 	avatar_loader_.start(mainwindow_);
-	connect(&avatar_loader_, &AvatarLoader::updated, [&](){
+	connect(&avatar_loader_, &AvatarLoader::updated, [&](RepositoryWrapperFrameP frame){
 		QString email = ui->lineEdit_user_email->text();
-		QIcon icon = avatar_loader_.fetch(email.toStdString(), false);
+		QIcon icon = avatar_loader_.fetch(frame.pointer, email.toStdString(), false);
 		setAvatar(icon);
 	});
 
-	ui->lineEdit_user_name->setFocus();
+	ui->stackedWidget->setCurrentWidget(ui->page_helper_tools);
 }
 
 WelcomeWizardDialog::~WelcomeWizardDialog()
@@ -60,11 +60,6 @@ void WelcomeWizardDialog::set_git_command_path(QString const &v)
 	ui->lineEdit_git->setText(v);
 }
 
-void WelcomeWizardDialog::set_file_command_path(QString const &v)
-{
-	ui->lineEdit_file->setText(v);
-}
-
 QString WelcomeWizardDialog::user_name() const
 {
 	return ui->lineEdit_user_name->text();
@@ -83,11 +78,6 @@ QString WelcomeWizardDialog::default_working_folder() const
 QString WelcomeWizardDialog::git_command_path() const
 {
 	return ui->lineEdit_git->text();
-}
-
-QString WelcomeWizardDialog::file_command_path() const
-{
-	return ui->lineEdit_file->text();
 }
 
 void WelcomeWizardDialog::on_pushButton_prev_clicked()
@@ -129,10 +119,17 @@ void WelcomeWizardDialog::on_stackedWidget_currentChanged(int /*arg1*/)
 		if (user_name().isEmpty() && user_email().isEmpty()) {
 			Git::Context gcx;
 			gcx.git_command = git_command_path();
-			Git g(gcx, QString());
+			Git g(gcx, {}, {}, {});
 			Git::User user = g.getUser(Git::Source::Global);
 			set_user_name(user.name);
 			set_user_email(user.email);
+		}
+		if (user_name().isEmpty()) {
+			ui->lineEdit_user_name->setFocus();
+		} else if (user_email().isEmpty()) {
+			ui->lineEdit_user_email->setFocus();
+		} else {
+			ui->pushButton_next->setFocus();
 		}
 	} else if (w == ui->page_default_working_folder) {
 		ui->lineEdit_default_working_folder->setFocus();
@@ -141,8 +138,8 @@ void WelcomeWizardDialog::on_stackedWidget_currentChanged(int /*arg1*/)
 		ui->lineEdit_preview_email->setText(ui->lineEdit_user_email->text());
 		ui->lineEdit_preview_folder->setText(ui->lineEdit_default_working_folder->text());
 		ui->lineEdit_preview_git->setText(ui->lineEdit_git->text());
-		ui->lineEdit_preview_file->setText(ui->lineEdit_file->text());
 		next_text = tr("Finish");
+		ui->pushButton_next->setFocus();
 	}
 	ui->pushButton_prev->setText(prev_text.isEmpty() ? tr("<< Prev") : prev_text);
 	ui->pushButton_next->setText(next_text.isEmpty() ? tr("Next >>") : next_text);
@@ -164,12 +161,6 @@ void WelcomeWizardDialog::on_pushButton_browse_git_clicked()
 	ui->lineEdit_git->setText(s);
 }
 
-void WelcomeWizardDialog::on_pushButton_browse_file_clicked()
-{
-	QString s = mainwindow_->selectFileCommand(false);
-	ui->lineEdit_file->setText(s);
-}
-
 void WelcomeWizardDialog::setAvatar(QIcon const &icon)
 {
 	QPixmap pm = icon.pixmap(QSize(64, 64));
@@ -181,10 +172,19 @@ void WelcomeWizardDialog::on_pushButton_get_icon_clicked()
 	ui->label_avatar->setPixmap(QPixmap());
 	QString email = ui->lineEdit_user_email->text();
 	if (email.indexOf('@') > 0) {
-		QIcon icon = avatar_loader_.fetch(email.toStdString(), true);
+		QIcon icon = avatar_loader_.fetch(nullptr, email.toStdString(), true);
 		if (!icon.isNull()) {
 			setAvatar(icon);
 		}
 	}
+}
+
+void WelcomeWizardDialog::on_lineEdit_git_textChanged(const QString &arg1)
+{
+	QString ss;
+	if (!misc::isExecutable(arg1)) {
+		ss = "* { background-color: #ffc0c0; }";
+	}
+	ui->lineEdit_git->setStyleSheet(ss);
 }
 

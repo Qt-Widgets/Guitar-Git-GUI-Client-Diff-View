@@ -41,10 +41,27 @@ void BigDiffWindow::updateDiffView()
 	ui->widget_diff->updateDiffView(m->param.diff, m->param.uncommited);
 }
 
-void BigDiffWindow::init(BasicMainWindow *mw, FileDiffWidget::InitParam_ const &param)
+void BigDiffWindow::init(MainWindow *mw, FileDiffWidget::InitParam_ const &param)
 {
 	ui->widget_diff->bind(mw);
 	m->param = param;
+
+	{
+		QString name = m->param.diff.path;
+		int i = name.lastIndexOf('/');
+		if (i >= 0) {
+			name = name.mid(i + 1);
+		}
+		ui->lineEdit_center->setText(name);
+	}
+	auto Text = [](QString id){
+		if (id.startsWith(PATH_PREFIX)) {
+			id = id.mid(1);
+		}
+		return id;
+	};
+	ui->lineEdit_left->setText(Text(m->param.diff.blob.a_id));
+	ui->lineEdit_right->setText(Text(m->param.diff.blob.b_id));
 
 	switch (m->param.view_style) {
 	case FileDiffWidget::ViewStyle::LeftOnly:

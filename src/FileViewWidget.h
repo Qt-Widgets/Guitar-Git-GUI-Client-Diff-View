@@ -46,10 +46,7 @@ using X_ImageViewWidget = ImageViewWidget;
 	FileViewType view_type = FileViewType::None;
 
 public:
-	explicit FileViewWidget(QWidget *parent = 0);
-	~FileViewWidget()
-	{
-	}
+	explicit FileViewWidget(QWidget *parent = nullptr);
 
 	void setTextCodec(QTextCodec *codec);
 
@@ -61,7 +58,7 @@ public:
 
 	void setDiffMode(const TextEditorEnginePtr &editor_engine, QScrollBar *vsb, QScrollBar *hsb);
 
-	int latin1Width() const;
+//	int latin1Width(const QString &s) const;
 	int lineHeight() const;
 
 	TextEditorTheme const *theme() const;

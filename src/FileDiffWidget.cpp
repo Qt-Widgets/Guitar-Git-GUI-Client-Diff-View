@@ -22,8 +22,8 @@ enum {
 };
 
 struct FileDiffWidget::Private {
-	BasicMainWindow *mainwindow = nullptr;
-	InitParam_ init_param_;
+	MainWindow *mainwindow = nullptr;
+	FileDiffWidget::InitParam_ init_param_;
 	Git::CommitItemList commit_item_list;
 	std::vector<std::string> original_lines;
 	TextEditorEnginePtr engine_left;
@@ -98,7 +98,7 @@ FileDiffWidget::ViewStyle FileDiffWidget::viewstyle() const
 
 
 
-void FileDiffWidget::bind(BasicMainWindow *mw)
+void FileDiffWidget::bind(MainWindow *mw)
 {
 	Q_ASSERT(mw);
 	m->mainwindow = mw;
@@ -109,7 +109,7 @@ void FileDiffWidget::bind(BasicMainWindow *mw)
 	connect(ui->horizontalScrollBar, &QAbstractSlider::valueChanged, this, &FileDiffWidget::onHorizontalScrollValueChanged);
 }
 
-BasicMainWindow *FileDiffWidget::mainwindow()
+MainWindow *FileDiffWidget::mainwindow()
 {
 	return m->mainwindow;
 }
@@ -117,15 +117,16 @@ BasicMainWindow *FileDiffWidget::mainwindow()
 GitPtr FileDiffWidget::git()
 {
 	if (!mainwindow()) {
-		qDebug() << "Maybe, you forgot to call FileDiffWidget::bind() ?";
+		qDebug() << "Maybe, you forgot to call FileDiffWidget::bind()?";
 		return GitPtr();
 	}
 	return mainwindow()->git();
 }
 
-Git::Object FileDiffWidget::cat_file(GitPtr const &/*g*/, QString const &id)
+Git::Object FileDiffWidget::cat_file(GitPtr g, QString const &id)
 {
-	return mainwindow()->cat_file(id);
+    (void)g;
+	return mainwindow()->cat_file(mainwindow()->frame(), id);
 }
 
 int FileDiffWidget::totalTextLines() const
@@ -187,7 +188,7 @@ void FileDiffWidget::makeSideBySideDiffData(Git::Diff const &diff, std::vector<s
 			auto ParseNumber = [&](){
 				size_t v = 0;
 				while (isdigit(*p & 0xff)) {
-					v = v * 10 + (*p - '0');
+                    v = v * 10 + size_t(*p - '0');
 					p++;
 				}
 				return v;
@@ -215,8 +216,8 @@ void FileDiffWidget::makeSideBySideDiffData(Git::Diff const &diff, std::vector<s
 	});
 	size_t h = hunks.size();
 	while (linenum > 0 || h > 0) {
-		while (h > 0) {
-			int hunk_number = h - 1;
+        while (h > 0) {
+            int hunk_number = int(h - 1);
 			HunkItem const &hi = hunks[hunk_number];
 			if (hi.pos + hi.len < linenum) {
 				break;
@@ -357,8 +358,9 @@ FileViewType FileDiffWidget::setupPreviewWidget()
 {
 	clearDiffView();
 
-	QString mimetype_l = mainwindow()->determinFileType(m->init_param_.bytes_a, true);
-	QString mimetype_r = mainwindow()->determinFileType(m->init_param_.bytes_b, true);
+	QString mimetype_l = mainwindow()->determinFileType(m->init_param_.bytes_a);
+	QString mimetype_r = mainwindow()->determinFileType(m->init_param_.bytes_b);
+//	qDebug() << mimetype_l << mimetype_r;
 
 	if (misc::isImage(mimetype_l) || misc::isImage(mimetype_r)) { // image
 
@@ -391,9 +393,15 @@ void FileDiffWidget::setSingleFile(QByteArray const &ba, QString const &id, QStr
 	m->init_param_.diff.blob.a_id = id;
 }
 
-void FileDiffWidget::setOriginalLines_(QByteArray const &ba)
+
+
+void FileDiffWidget::setOriginalLines_(QByteArray const &ba, Git::SubmoduleItem const *submodule, Git::CommitItem const *submodule_commit)
 {
+    (void)submodule;
+    (void)submodule_commit;
+
 	m->original_lines.clear();
+
 	if (!ba.isEmpty()) {
 		char const *begin = ba.data();
 		char const *end = begin + ba.size();
@@ -408,7 +416,7 @@ void FileDiffWidget::setLeftOnly(QByteArray const &ba, Git::Diff const &diff)
 	m->init_param_.bytes_a = ba;
 	m->init_param_.diff = diff;
 
-	setOriginalLines_(ba);
+	setOriginalLines_(ba, &diff.a_submodule.item, &diff.a_submodule.commit);
 
 	if (setupPreviewWidget() == FileViewType::Text) {
 
@@ -424,6 +432,45 @@ void FileDiffWidget::setLeftOnly(QByteArray const &ba, Git::Diff const &diff)
 	}
 }
 
+bool FileDiffWidget::setSubmodule(Git::Diff const &diff)
+{
+	Git::SubmoduleItem const &submod_a = diff.a_submodule.item;
+	Git::SubmoduleItem const &submod_b = diff.b_submodule.item;
+	Git::CommitItem const &submod_commit_a = diff.a_submodule.commit;
+	Git::CommitItem const &submod_commit_b = diff.b_submodule.commit;
+	if (submod_a || submod_b) {
+		auto Text = [](Git::SubmoduleItem const *submodule, Git::CommitItem const *submodule_commit, TextDiffLineList *out){
+			*out = {};
+			if (submodule && *submodule) {
+				QString text;
+				text += "name: " + submodule->name + '\n';
+				text += "path: " + submodule->path + '\n';
+				text += "url: " + submodule->url + '\n';
+				text += "commit: " + submodule->id + '\n';
+				text += "date: " + misc::makeDateTimeString(submodule_commit->commit_date) + '\n';
+				text += "author: " + submodule_commit->author + '\n';
+				text += "email: " + submodule_commit->email + '\n';
+				text += '\n';
+				text += submodule_commit->message;
+				for (QString const &line : misc::splitLines(text)) {
+					out->push_back(Document::Line(line.toStdString()));
+				}
+			}
+		};
+		TextDiffLineList left_lines;
+		TextDiffLineList right_lines;
+		if (submod_a) {
+			Text(&submod_a, &submod_commit_a, &left_lines);
+		}
+		if (submod_b) {
+			Text(&submod_b, &submod_commit_b, &right_lines);
+		}
+		setDiffText(diff, left_lines, right_lines);
+		return true;
+	}
+	return false;
+}
+
 void FileDiffWidget::setRightOnly(QByteArray const &ba, Git::Diff const &diff)
 {
 	m->init_param_ = InitParam_();
@@ -431,9 +478,11 @@ void FileDiffWidget::setRightOnly(QByteArray const &ba, Git::Diff const &diff)
 	m->init_param_.bytes_b = ba;
 	m->init_param_.diff = diff;
 
-	setOriginalLines_(ba);
+	setOriginalLines_(ba, &diff.b_submodule.item, &diff.b_submodule.commit);
 
-	if (setupPreviewWidget() == FileViewType::Text) {
+	if (setSubmodule(diff)) {
+		// ok
+	} else if (setupPreviewWidget() == FileViewType::Text) {
 
 		TextDiffLineList left_lines;
 		TextDiffLineList right_lines;
@@ -456,16 +505,20 @@ void FileDiffWidget::setSideBySide(QByteArray const &ba, Git::Diff const &diff, 
 	m->init_param_.uncommited = uncommited;
 	m->init_param_.workingdir = workingdir;
 
-	setOriginalLines_(ba);
+	setOriginalLines_(ba, {}, {});
 
-	if (setupPreviewWidget() == FileViewType::Text) {
+	if (setSubmodule(diff)) {
+		// ok
+	} else {
+		if (setupPreviewWidget() == FileViewType::Text) {
 
-		TextDiffLineList left_lines;
-		TextDiffLineList right_lines;
+			TextDiffLineList left_lines;
+			TextDiffLineList right_lines;
 
-		makeSideBySideDiffData(diff, m->original_lines, &left_lines, &right_lines);
+			makeSideBySideDiffData(diff, m->original_lines, &left_lines, &right_lines);
 
-		setDiffText(diff, left_lines, right_lines);
+			setDiffText(diff, left_lines, right_lines);
+		}
 	}
 }
 
@@ -477,7 +530,7 @@ void FileDiffWidget::setSideBySide_(QByteArray const &ba_a, QByteArray const &ba
 	m->init_param_.bytes_b = ba_b;
 	m->init_param_.workingdir = workingdir;
 
-	setOriginalLines_(ba_a);
+	setOriginalLines_(ba_a, {}, {});
 
 	if (setupPreviewWidget() == FileViewType::Text) {
 
@@ -490,11 +543,11 @@ void FileDiffWidget::setSideBySide_(QByteArray const &ba_a, QByteArray const &ba
 	}
 }
 
-QString FileDiffWidget::diffObjects(GitPtr const &g, QString const &a_id, QString const &b_id)
+QString FileDiffWidget::diffObjects(GitPtr g, QString const &a_id, QString const &b_id)
 {
 	if (m->text_codec) {
-		Git::Object obj_a = mainwindow()->cat_file_(g, a_id);
-		Git::Object obj_b = mainwindow()->cat_file_(g, b_id);
+		Git::Object obj_a = mainwindow()->cat_file_(mainwindow()->frame(), g, a_id);
+		Git::Object obj_b = mainwindow()->cat_file_(mainwindow()->frame(), g, b_id);
 		if (obj_b.type == Git::Object::Type::UNKNOWN) {
 			obj_b.type = Git::Object::Type::BLOB;
 		}
@@ -535,10 +588,10 @@ void FileDiffWidget::updateDiffView(Git::Diff const &info, bool uncommited)
 	if (isValidID_(info.blob.a_id) && isValidID_(info.blob.b_id)) {
 		Git::Object obj_a = cat_file(g, info.blob.a_id);
 		Git::Object obj_b = cat_file(g, info.blob.b_id);
-		QString mime_a = mainwindow()->determinFileType(obj_a.content, true);
-		QString mime_b = mainwindow()->determinFileType(obj_b.content, true);
+		QString mime_a = mainwindow()->determinFileType(obj_a.content);
+		QString mime_b = mainwindow()->determinFileType(obj_b.content);
 		if (misc::isImage(mime_a) && misc::isImage(mime_b)) {
-			setSideBySide_(obj_a.content, obj_b.content, g->workingRepositoryDir());
+			setSideBySide_(obj_a.content, obj_b.content, g->workingDir());
 			return;
 		}
 	}
@@ -556,7 +609,7 @@ void FileDiffWidget::updateDiffView(Git::Diff const &info, bool uncommited)
 		if (isValidID_(diff.blob.a_id)) { // 左が有効
 			obj = cat_file(g, diff.blob.a_id);
 			if (isValidID_(diff.blob.b_id)) { // 右が有効
-				setSideBySide(obj.content, diff, uncommited, g->workingRepositoryDir()); // 通常のdiff表示
+				setSideBySide(obj.content, diff, uncommited, g->workingDir()); // 通常のdiff表示
 			} else {
 				setLeftOnly(obj.content, diff); // 右が無効の時は、削除されたファイル
 			}
@@ -582,7 +635,7 @@ void FileDiffWidget::updateDiffView(QString const &id_left, QString const &id_ri
 	GitDiff::parseDiff(text, &diff, &diff);
 
 	Git::Object obj = cat_file(g, diff.blob.a_id);
-	setSideBySide(obj.content, diff, false, g->workingRepositoryDir());
+	setSideBySide(obj.content, diff, false, g->workingDir());
 
 	ui->widget_diff_slider->clear(false);
 
@@ -650,6 +703,10 @@ void FileDiffWidget::onDiffWidgetResized()
 
 void FileDiffWidget::on_toolButton_fullscreen_clicked()
 {
+	if (m->init_param_.diff.blob.a_id.isEmpty() && m->init_param_.diff.blob.b_id.isEmpty()) {
+		return;
+	}
+
 	BigDiffWindow win(mainwindow());
 	win.setWindowState(Qt::WindowMaximized);
 	win.init(mainwindow(), m->init_param_);
@@ -658,7 +715,6 @@ void FileDiffWidget::on_toolButton_fullscreen_clicked()
 
 void FileDiffWidget::setFocusAcceptable(Qt::FocusPolicy focuspolicy)
 {
-//	Qt::FocusPolicy focuspolicy = f ? Qt::ClickFocus : Qt::NoFocus;
 	ui->widget_diff_left->setFocusPolicy(focuspolicy);
 	ui->widget_diff_right->setFocusPolicy(focuspolicy);
 }

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>309</width>
-    <height>260</height>
+    <width>950</width>
+    <height>736</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,25 +25,6 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButton_select_git_command">
-        <property name="text">
-         <string>Browse...</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBox_3">
-     <property name="title">
-      <string>File command</string>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_5">
-      <item>
-       <widget class="QLineEdit" name="lineEdit_file_command"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushButton_select_file_command">
         <property name="text">
          <string>Browse...</string>
         </property>
@@ -72,6 +53,25 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="groupBox_5">
+     <property name="title">
+      <string>SSH command (option)</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_7">
+      <item>
+       <widget class="QLineEdit" name="lineEdit_ssh_command"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_select_ssh_command">
+        <property name="text">
+         <string>Browse...</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -89,8 +89,6 @@
  <tabstops>
   <tabstop>lineEdit_git_command</tabstop>
   <tabstop>pushButton_select_git_command</tabstop>
-  <tabstop>lineEdit_file_command</tabstop>
-  <tabstop>pushButton_select_file_command</tabstop>
   <tabstop>lineEdit_gpg_command</tabstop>
   <tabstop>pushButton_select_gpg_command</tabstop>
  </tabstops>

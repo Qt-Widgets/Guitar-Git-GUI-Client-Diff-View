@@ -39,7 +39,17 @@
         <file>image/signature-bad.png</file>
         <file>image/signature-dubious.png</file>
         <file>image/signature-good.png</file>
-	<file>translations/Guitar_ja.qm</file>
-  	<file>translations/Guitar_ru.qm</file>
+        <file>translations/Guitar_ja.qm</file>
+        <file>translations/Guitar_ru.qm</file>
+        <file>image/add.svg</file>
+        <file>image/chg.svg</file>
+        <file>image/del.svg</file>
+        <file>image/ren.svg</file>
+        <file>image/cpy.svg</file>
+        <file>image/status.svg</file>
+        <file>translations/Guitar_zh-CN.qm</file>
+        <file>translations/Guitar_zh-TW.qm</file>
+        <file>translations/Guitar_es.qm</file>
+        <file>filemagic/magic.mgc</file>
     </qresource>
 </RCC>

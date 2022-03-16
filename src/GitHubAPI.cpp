@@ -1,6 +1,6 @@
 
 #include "GitHubAPI.h"
-#include "BasicMainWindow.h"
+#include "MainWindow.h"
 #include "MemoryReader.h"
 #include "charvec.h"
 #include "common/misc.h"
@@ -15,7 +15,8 @@
 using WebClientPtr = GitHubAPI::WebClientPtr;
 
 struct GitHubRequestThread::Private {
-	BasicMainWindow *mainwindow = nullptr;
+	MainWindow *mainwindow = nullptr;
+	WebContext webcx = {WebClient::HTTP_1_0};
 	WebClientPtr web;
 };
 
@@ -29,17 +30,18 @@ GitHubRequestThread::~GitHubRequestThread()
 	delete m;
 }
 
-void GitHubRequestThread::start(BasicMainWindow *mainwindow)
+void GitHubRequestThread::start(MainWindow *mainwindow)
 {
 	m->mainwindow = mainwindow;
-	m->web = std::make_shared<WebClient>(m->mainwindow->webContext());
+	m->webcx.set_keep_alive_enabled(false);
+	m->web = std::make_shared<WebClient>(&m->webcx);
 	QThread::start();
 }
 
 void GitHubRequestThread::run()
 {
 	ok = false;
-	if (web()->get(WebClient::URL(url)) == 200) {
+	if (web()->get(WebClient::Request(url)) == 200) {
 		WebClient::Response const &r = web()->response();
 		if (!r.content.empty()) {
 			text = to_stdstr(r.content);
@@ -80,7 +82,7 @@ QList<GitHubAPI::SearchResultItem> GitHubAPI::searchRepository(std::string const
 		QByteArray ba(th.text.c_str(), th.text.size());
 		QJsonDocument doc = QJsonDocument::fromJson(ba);
 		QJsonArray a1 = doc.object().value("items").toArray();
-		for (QJsonValue const &v1 : a1) {
+		for (QJsonValueRef const &v1 : a1) {
 			QJsonObject o1 = v1.toObject();
 			SearchResultItem item;
 			auto String = [&](QString const &key){

@@ -78,10 +78,10 @@ const TextEditorTheme *FileViewWidget::theme() const
 	return ui_page_text->theme();
 }
 
-int FileViewWidget::latin1Width() const
-{
-	return ui_page_text->latin1Width();
-}
+//int FileViewWidget::latin1Width(QString const &s) const
+//{
+//	return ui_page_text->latin1Width(s);
+//}
 
 int FileViewWidget::lineHeight() const
 {
@@ -127,7 +127,7 @@ void FileViewWidget::setText(const QList<Document::Line> *source, QMainWindow *m
 	setViewType(FileViewType::Text);
 	this->source_id = object_id;
 #ifdef APP_GUITAR
-	ui_page_text->setDocument(source, qobject_cast<BasicMainWindow *>(mw), object_id, object_path);
+	ui_page_text->setDocument(source, qobject_cast<MainWindow *>(mw), object_id, object_path);
 	scrollToTop();
 	texteditor()->moveCursorOut(); // 現在行を -1 にして、カーソルを非表示にする。
 #else

@@ -15,7 +15,7 @@ GitObjectManager::GitObjectManager()
 	subdir_git_objects_pack = subdir_git_objects / "pack";
 }
 
-void GitObjectManager::setup(GitPtr const &g)
+void GitObjectManager::setup(GitPtr g)
 {
 	this->g = g;
 	clearIndexes();
@@ -23,7 +23,7 @@ void GitObjectManager::setup(GitPtr const &g)
 
 QString GitObjectManager::workingDir()
 {
-	return g->workingRepositoryDir();
+	return g->workingDir();
 }
 
 void GitObjectManager::loadIndexes()
@@ -237,15 +237,20 @@ size_t GitObjectCache::size() const
 	return size;
 }
 
-void GitObjectCache::setup(GitPtr const &g)
+void GitObjectCache::setup(GitPtr g)
 {
 	items.clear();
 	revparsemap.clear();
-	object_manager.setup(g->dup());
+	if (g) {
+		object_manager.setup(g->dup());
+	}
 }
 
 QString GitObjectCache::revParse(QString const &name)
 {
+	GitPtr g = git();
+	if (!g) return QString();
+
 	{
 		QMutexLocker lock(&object_manager.mutex);
 		auto it = revparsemap.find(name);
@@ -254,7 +259,7 @@ QString GitObjectCache::revParse(QString const &name)
 		}
 	}
 
-	QString id = git()->rev_parse(name);
+	QString id = g->rev_parse(name);
 
 	{
 		QMutexLocker lock(&object_manager.mutex);
@@ -312,7 +317,7 @@ Git::Object GitObjectCache::catFile(QString const &id)
 	if (true) {
 		if (git()->cat_file(id, &ba)) { // 外部コマンド起動の git cat-file -p を試してみる
 			// 上の独自実装のファイル取得が正しく動作していれば、ここには来ないはず
-			qDebug() << __LINE__ << __FILE__ << Q_FUNC_INFO << id;
+			qDebug() << __FILE__ << __LINE__ << Q_FUNC_INFO << id;
 			return Store();
 		}
 	}
@@ -337,8 +342,8 @@ QString GitObjectCache::getCommitIdFromTag(QString const &tag)
 			if (!obj.content.isEmpty()) {
 				misc::splitLines(obj.content, [&](char const *ptr, size_t len){
 					if (commit_id.isEmpty()) {
-						if (len >= 7 + GIT_ID_LENGTH && strncmp(ptr, "object ", 7) == 0) {
-							QString id = QString::fromUtf8(ptr + 7, len - 7).trimmed();
+                        if (len >= 7 + GIT_ID_LENGTH && strncmp(ptr, "object ", 7) == 0) {
+                            QString id = QString::fromUtf8(ptr + 7, int(len - 7)).trimmed();
 							if (Git::isValidID(id)) {
 								commit_id = id;
 							}
@@ -356,9 +361,9 @@ QString GitObjectCache::getCommitIdFromTag(QString const &tag)
 
 
 
-bool GitCommit::parseCommit(GitObjectCache *objcache, QString const &id)
+bool GitCommit::parseCommit(GitObjectCache *objcache, QString const &id, GitCommit *out)
 {
-	parents.clear();
+	*out = {};
 	if (!id.isEmpty()) {
 		QStringList parents;
 		{
@@ -371,18 +376,63 @@ bool GitCommit::parseCommit(GitObjectCache *objcache, QString const &id)
 					QString key = line.mid(0, i);
 					QString val = line.mid(i + 1).trimmed();
 					if (key == "tree") {
-						tree_id = val;
+						out->tree_id = val;
 					} else if (key == "parent") {
 						parents.push_back(val);
 					}
 				}
 			}
 		}
-		if (!tree_id.isEmpty()) { // サブディレクトリ
-			this->parents.append(parents);
+		if (!out->tree_id.isEmpty()) { // サブディレクトリ
+			out->parents.append(parents);
 			return true;
 		}
 	}
 	return false;
 }
 
+void parseGitTreeObject(QByteArray const &ba, const QString &path_prefix, GitTreeItemList *out)
+{
+	*out = {};
+	QString s = QString::fromUtf8(ba);
+	QStringList lines = misc::splitLines(s);
+	for (QString const &line : lines) {
+		int tab = line.indexOf('\t'); // タブより後ろにパスがある
+		if (tab > 0) {
+			QString stat = line.mid(0, tab); // タブの手前まで
+			QStringList vals = misc::splitWords(stat); // 空白で分割
+			if (vals.size() >= 3) {
+				GitTreeItem data;
+				data.mode = vals[0]; // ファイルモード
+				data.id = vals[2]; // id（ハッシュ値）
+				QString type = vals[1]; // 種類（tree/blob）
+				QString path = line.mid(tab + 1); // パス
+				path = Git::trimPath(path);
+				data.name = path_prefix.isEmpty() ? path : misc::joinWithSlash(path_prefix, path);
+				if (type == "tree") {
+					data.type = GitTreeItem::TREE;
+				} else if (type == "blob") {
+					data.type = GitTreeItem::BLOB;
+				} else if (type == "commit") {
+					data.type = GitTreeItem::COMMIT;
+				}
+				if (data.type != GitTreeItem::UNKNOWN) {
+					out->push_back(data);
+				}
+			}
+		}
+	}
+}
+
+bool parseGitTreeObject(GitObjectCache *objcache, const QString &commit_id, const QString &path_prefix, GitTreeItemList *out)
+{
+	out->clear();
+	if (!commit_id.isEmpty()) {
+		Git::Object obj = objcache->catFile(commit_id);
+		if (!obj.content.isEmpty()) { // 内容を取得
+			parseGitTreeObject(obj.content, path_prefix, out);
+			return true;
+		}
+	}
+	return false;
+}

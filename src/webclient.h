@@ -12,19 +12,19 @@
 class WebContext;
 class WebClient;
 
-#define CT_APPLICATION_X_WWW_FORM_URLENCODED "application/x-www-form-urlencoded"
-#define CT_MULTIPART_FORM_DATA "multipart/form-data"
-
 class WebClientHandler {
 protected:
-	void abort(std::string const &message = std::string());
+	void abort(std::string const &message = {});
 public:
 	virtual ~WebClientHandler() = default;
-	virtual void checkHeader(WebClient * /*wc*/)
+	virtual void checkHeader(WebClient *wc)
 	{
+		(void)wc;
 	}
-	virtual void checkContent(char const * /*ptr*/, size_t /*len*/)
+	virtual void checkContent(char const *ptr, size_t len)
 	{
+		(void)ptr;
+		(void)len;
 	}
 };
 
@@ -37,8 +37,16 @@ public:
 	}
 };
 
+struct ResponseHeader;
+
 class WebClient {
 public:
+	class ContentType {
+	public:
+		static constexpr const char *APPLICATION_OCTET_STREAM = "application/octet-stream";
+		static constexpr const char *APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
+		static constexpr const char *MULTIPART_FORM_DATA = "multipart/form-data";
+	};
 	class URL {
 		friend class WebClient;
 	private:
@@ -58,7 +66,50 @@ public:
 		std::string const &path() const { return data.path; }
 		bool isssl() const;
 	};
-
+	enum HttpVersion {
+		HTTP_1_0,
+		HTTP_1_1,
+	};
+	struct Authorization {
+		enum Type {
+			None,
+			Basic,
+		} type = None;
+		std::string uid;
+		std::string pwd;
+	};
+	class Request {
+		friend class ::WebClient;
+	private:
+		URL url;
+		Authorization auth;
+		std::vector<std::string> headers;
+	public:
+		Request() = default;
+		Request(std::string const &loc, std::vector<std::string> const &headers = {})
+			: url(loc)
+			, headers(headers)
+		{
+		}
+		void set_location(std::string const &loc)
+		{
+			url = URL(loc);
+		}
+		void set_authorization(Authorization::Type type, std::string const &uid, std::string const &pwd)
+		{
+			auth.type = type;
+			auth.uid = uid;
+			auth.pwd = pwd;
+		}
+		void set_basic_authorization(std::string const &uid, std::string const &pwd)
+		{
+			set_authorization(WebClient::Authorization::Basic, uid, pwd);
+		}
+		void add_header(std::string const &s)
+		{
+			headers.push_back(s);
+		}
+	};
 	class Error {
 	private:
 		std::string msg_;
@@ -100,7 +151,7 @@ public:
 		ContentDisposition content_disposition;
 		std::string content_transfer_encoding;
 		Part() = default;
-		Part(char const *data, size_t size, std::string const &content_type = std::string())
+		Part(char const *data, size_t size, std::string const &content_type = {})
 			: data(data)
 			, size(size)
 			, content_type(content_type)
@@ -120,18 +171,18 @@ private:
 	Private *m;
 	void clear_error();
 	static int get_port(URL const *url, char const *scheme, char const *protocol);
-	void set_default_header(URL const &url, Post const *post, const RequestOption &opt);
-	std::string make_http_request(URL const &url, Post const *post, const WebProxy *proxy, bool https);
+	void set_default_header(const Request &url, Post const *post, const RequestOption &opt);
+	std::string make_http_request(const Request &url, Post const *post, const WebProxy *proxy, bool https);
 	void parse_http_header(char const *begin, char const *end, std::vector<std::string> *header);
 	void parse_http_header(char const *begin, char const *end, Response *out);
-	bool http_get(URL const &request_url, Post const *post, RequestOption const &opt, std::vector<char> *out);
-	bool https_get(URL const &request_url, Post const *post, RequestOption const &opt, std::vector<char> *out);
-	bool get(URL const &url, Post const *post, Response *out, WebClientHandler *handler);
+	bool http_get(const Request &request_req, Post const *post, RequestOption const &opt, ResponseHeader *rh, std::vector<char> *out);
+	bool https_get(const Request &request_url, Post const *post, RequestOption const &opt, ResponseHeader *rh, std::vector<char> *out);
+	bool get(const Request &req, Post const *post, Response *out, WebClientHandler *handler);
 	static void parse_header(std::vector<std::string> const *header, WebClient::Response *res);
 	static std::string header_value(std::vector<std::string> const *header, std::string const &name);
 	void append(char const *ptr, size_t len, std::vector<char> *out, WebClientHandler *handler);
 	void on_end_header(const std::vector<char> *vec, WebClientHandler *handler);
-	void receive_(const RequestOption &opt, std::function<int (char *, int)> const &, std::vector<char> *out);
+	void receive_(const RequestOption &opt, std::function<int (char *, int)> const &, ResponseHeader *rh, std::vector<char> *out);
 	void output_debug_string(char const *str);
 	void output_debug_strings(const std::vector<std::string> &vec);
 	static void cleanup();
@@ -143,9 +194,11 @@ public:
 	WebClient(WebClient const &) = delete;
 	void operator = (WebClient const &) = delete;
 
+	void set_http_version(HttpVersion httpver);
+
 	Error const &error() const;
-	int get(URL const &url, WebClientHandler *handler = nullptr);
-	int post(URL const &url, Post const *post, WebClientHandler *handler = nullptr);
+	int get(const Request &req, WebClientHandler *handler = nullptr);
+	int post(const Request &req, Post const *post, WebClientHandler *handler = nullptr);
 	void close();
 	void add_header(std::string const &text);
 	Response const &response() const;
@@ -166,11 +219,12 @@ private:
 	struct Private;
 	Private *m;
 public:
-	WebContext();
+	WebContext(WebClient::HttpVersion httpver);
 	~WebContext();
 	WebContext(WebContext const &r) = delete;
 	void operator = (WebContext const &r) = delete;
 
+	void set_http_version(WebClient::HttpVersion httpver);
 	void set_keep_alive_enabled(bool f);
 
 	void set_http_proxy(std::string const &proxy);

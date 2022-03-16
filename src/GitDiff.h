@@ -30,6 +30,7 @@ private:
 	using MapList = std::list<LookupTable>;
 
 	GitPtr git();
+	GitPtr git(const Git::SubmoduleItem &submod);
 
 	static void AddItem(Git::Diff *item, QList<Git::Diff> *diffs);
 
@@ -41,8 +42,8 @@ public:
 		this->objcache = objcache;
 	}
 
-	bool diff(QString const &id, QList<Git::Diff> *out);
-	bool diff_uncommited(QList<Git::Diff> *out);
+	bool diff(QString const &id, const QList<Git::SubmoduleItem> &submodules, QList<Git::Diff> *out);
+	bool diff_uncommited(const QList<Git::SubmoduleItem> &submodules, QList<Git::Diff> *out);
 
 	void interrupt()
 	{
@@ -50,8 +51,8 @@ public:
 	}
 
 public:
-	static QString diffObjects(const GitPtr &g, QString const &a_id, QString const &b_id);
-	static QString diffFiles(const GitPtr &g, QString const &a_path, QString const &b_path);
+	static QString diffObjects(GitPtr g, QString const &a_id, QString const &b_id);
+	static QString diffFiles(GitPtr g, QString const &a_path, QString const &b_path);
 	static void parseDiff(std::string const &s, const Git::Diff *info, Git::Diff *out);
 	static QString makeKey(QString const &a_id, QString const &b_id);
 	static QString makeKey(const Git::Diff &diff);

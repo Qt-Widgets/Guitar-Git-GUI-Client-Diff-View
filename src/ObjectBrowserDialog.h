@@ -4,7 +4,7 @@
 #include <QDialog>
 #include "Git.h"
 
-class BasicMainWindow;
+class MainWindow;
 class QListWidgetItem;
 class QTableWidgetItem;
 
@@ -16,11 +16,11 @@ class ObjectBrowserDialog : public QDialog {
 	Q_OBJECT
 private:
 	Ui::ObjectBrowserDialog *ui;
-	BasicMainWindow *mainwindow();
+	MainWindow *mainwindow();
 	GitPtr git();
 public:
-	explicit ObjectBrowserDialog(BasicMainWindow *parent, QStringList const &list);
-	~ObjectBrowserDialog();
+	explicit ObjectBrowserDialog(MainWindow *parent, QStringList const &list);
+	~ObjectBrowserDialog() override;
 	QString text() const;
 private slots:
 	void on_pushButton_inspect_clicked();

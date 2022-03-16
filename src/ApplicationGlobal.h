@@ -3,9 +3,14 @@
 
 #include <QColor>
 #include <QString>
+#include <filetype/filetype.h>
 #include "Theme.h"
+#include "main.h"
+
+class MainWindow;
 
 struct ApplicationGlobal {
+	MainWindow *mainwindow = nullptr;
 	bool start_with_shift_key = false;
 	QString organization_name;
 	QString application_name;
@@ -14,12 +19,18 @@ struct ApplicationGlobal {
 	QString generic_config_dir;
 	QString app_config_dir;
 	QString config_file_path;
-	QString file_command;
-	QString gpg_command;
 	QColor panel_bg_color;
 	ThemePtr theme;
+
+	FileType filetype;
+
+	ApplicationSettings appsettings;
+
+	void init(QApplication *a);
 };
 
 extern ApplicationGlobal *global;
+
+#define PATH_PREFIX "*"
 
 #endif // APPLICATIONGLOBAL_H

@@ -1,8 +1,9 @@
+#include "SettingGeneralForm.h"
+#include "ui_SettingGeneralForm.h"
 #include "MySettings.h"
 #include "SelectItemDialog.h"
 #include "ApplicationGlobal.h"
-#include "SettingGeneralForm.h"
-#include "ui_SettingGeneralForm.h"
+#include "Languages.h"
 #include "common/misc.h"
 
 #include <QFileDialog>
@@ -13,12 +14,10 @@ SettingGeneralForm::SettingGeneralForm(QWidget *parent) :
 {
 	ui->setupUi(this);
 
-	langs.push_back(SelectItemDialog::Item("en", tr("English")));
-	langs.push_back(SelectItemDialog::Item("ja", tr("Japanese")));
-	langs.push_back(SelectItemDialog::Item("ru", tr("Russian")));
+	langs = languages();
 
-	themes.push_back(SelectItemDialog::Item("standard", tr("Standard")));
-	themes.push_back(SelectItemDialog::Item("dark", tr("Dark")));
+	themes.push_back(Languages::Item("standard", tr("Standard")));
+	themes.push_back(Languages::Item("dark", tr("Dark")));
 
 	updateLanguage();
 	updateTheme();
@@ -27,6 +26,11 @@ SettingGeneralForm::SettingGeneralForm(QWidget *parent) :
 SettingGeneralForm::~SettingGeneralForm()
 {
 	delete ui;
+}
+
+QList<Languages::Item> SettingGeneralForm::languages()
+{
+	return Languages().items;
 }
 
 void SettingGeneralForm::exchange(bool save)
@@ -50,9 +54,9 @@ void SettingGeneralForm::updateLanguage()
 	if (id.isEmpty()) {
 		id = "en";
 	}
-	for (SelectItemDialog::Item const &item : langs) {
+	for (Languages::Item const &item : langs) {
 		if (item.id == id) {
-			ui->lineEdit_language->setText(item.text);
+			ui->lineEdit_language->setText(item.description);
 			return;
 		}
 	}
@@ -64,44 +68,48 @@ void SettingGeneralForm::updateTheme()
 	if (id.isEmpty()) {
 		id = "standard";
 	}
-	for (SelectItemDialog::Item const &item : themes) {
+	for (Languages::Item const &item : themes) {
 		if (item.id == id) {
-			ui->lineEdit_theme->setText(item.text);
+			ui->lineEdit_theme->setText(item.description);
 			return;
 		}
 	}
 }
 
-void SettingGeneralForm::on_pushButton_change_language_clicked()
+void SettingGeneralForm::execSelectLanguageDialog(QWidget *parent, QList<Languages::Item> const &langs, std::function<void()> const &done)
 {
-
-	SelectItemDialog dlg(this);
+	SelectItemDialog dlg(parent);
 	dlg.setWindowTitle(tr("Select Language"));
-	for (SelectItemDialog::Item const &item : langs) {
-		dlg.addItem(item.id, item.text);
+	for (Languages::Item const &item : langs) {
+		dlg.addItem(item.id, item.description);
 	}
 	dlg.select(global->language_id.isEmpty() ? "en" : global->language_id);
 	if (dlg.exec() == QDialog::Accepted) {
-		SelectItemDialog::Item item = dlg.item();
+		Languages::Item item = dlg.item();
 		global->language_id = item.id;
 		MySettings s;
 		s.beginGroup("UI");
 		s.setValue("Language", global->language_id);
 		s.endGroup();
-		updateLanguage();
+		done();
 	}
+}
+
+void SettingGeneralForm::on_pushButton_change_language_clicked()
+{
+	execSelectLanguageDialog(this, langs, [&](){updateLanguage();});
 }
 
 void SettingGeneralForm::on_pushButton_change_theme_clicked()
 {
 	SelectItemDialog dlg(this);
 	dlg.setWindowTitle(tr("Select Theme"));
-	for (SelectItemDialog::Item const &item : themes) {
-		dlg.addItem(item.id, item.text);
+	for (Languages::Item const &item : themes) {
+		dlg.addItem(item.id, item.description);
 	}
 	dlg.select(global->theme_id.isEmpty() ? "standard" : global->theme_id);
 	if (dlg.exec() == QDialog::Accepted) {
-		SelectItemDialog::Item item = dlg.item();
+		Languages::Item item = dlg.item();
 		global->theme_id = item.id;
 		MySettings s;
 		s.beginGroup("UI");
